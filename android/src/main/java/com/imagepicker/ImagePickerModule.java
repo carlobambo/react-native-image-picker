@@ -469,7 +469,8 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
     BitmapFactory.decodeFile(imageConfig.original.getAbsolutePath(), options);
     int initialWidth = options.outWidth;
     int initialHeight = options.outHeight;
-    updatedResultResponse(uri, imageConfig.original.getAbsolutePath());
+    String mimeType = options.outMimeType;
+    updatedResultResponse(uri, imageConfig.original.getAbsolutePath(), mimeType);
 
     // don't create a new file if contraint are respected
     if (imageConfig.useOriginal(initialWidth, initialHeight, result.currentRotation))
@@ -493,7 +494,7 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
         responseHelper.putInt("width", options.outWidth);
         responseHelper.putInt("height", options.outHeight);
 
-        updatedResultResponse(uri, imageConfig.resized.getAbsolutePath());
+        updatedResultResponse(uri, imageConfig.resized.getAbsolutePath(), mimeType);
         fileScan(reactContext, imageConfig.resized.getAbsolutePath());
       }
     }
@@ -506,7 +507,7 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
       {
         imageConfig = rolloutResult.imageConfig;
         uri = Uri.fromFile(imageConfig.getActualFile());
-        updatedResultResponse(uri, imageConfig.getActualFile().getAbsolutePath());
+        updatedResultResponse(uri, imageConfig.getActualFile().getAbsolutePath(), mimeType);
       }
       else
       {
@@ -555,7 +556,8 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
   }
 
   private void updatedResultResponse(@Nullable final Uri uri,
-                                     @NonNull final String path)
+                                     @NonNull final String path,
+                                     @Nullable final String mimeType)
   {
     responseHelper.putString("uri", uri.toString());
     responseHelper.putString("path", path);
@@ -564,7 +566,7 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
       responseHelper.putString("data", getBase64StringFromFile(path));
     }
 
-    putExtraFileInfo(path, responseHelper);
+    putExtraFileInfo(path, responseHelper, mimeType);
   }
 
   private boolean permissionsCheck(@NonNull final Activity activity,
@@ -740,25 +742,33 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
   }
 
   private void putExtraFileInfo(@NonNull final String path,
-                                @NonNull final ResponseHelper responseHelper)
+                                @NonNull final ResponseHelper responseHelper,
+                                @Nullable final String mimeType)
   {
     try {
       // size && filename
       File f = new File(path);
       responseHelper.putDouble("fileSize", f.length());
       responseHelper.putString("fileName", f.getName());
+
+      String type = "";
+
       // type
       String extension = MimeTypeMap.getFileExtensionFromUrl(path);
       String fileName = f.getName();
       if (extension != "") {
-        responseHelper.putString("type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension));
+        type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        // responseHelper.putString("type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension));
       } else {
         int i = fileName.lastIndexOf('.');
         if (i > 0) {
           extension = fileName.substring(i+1);
-          responseHelper.putString("type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension));
+          type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+          // responseHelper.putString("type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension));
         }
       }
+
+      responseHelper.putString("type", type == "" ? mimeType : type);
     } catch (Exception e) {
       e.printStackTrace();
     }
